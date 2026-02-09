@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: eiko-habits-web
+    runtime: node
+    plan: free
+    buildCommand: pnpm install && cd apps/web && pnpm run build
+    startCommand: cd apps/web && pnpm run start
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NEXT_PUBLIC_API_URL
+        value: https://api-production-50db.up.railway.app
