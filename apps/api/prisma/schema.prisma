@@ -1,0 +1,368 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum AuthProvider {
+  EMAIL
+  GOOGLE
+  APPLE
+}
+
+enum SubscriptionTier {
+  FREE
+  PREMIUM
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  EXPIRED
+  TRIALING
+}
+
+enum SubscriptionPlatform {
+  STRIPE
+  APP_STORE
+  PLAY_STORE
+}
+
+enum GoalStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  ARCHIVED
+}
+
+enum GoalCategory {
+  HEALTH
+  FITNESS
+  CAREER
+  EDUCATION
+  FINANCE
+  RELATIONSHIPS
+  CREATIVITY
+  MINDFULNESS
+  CUSTOM
+}
+
+enum HabitFrequency {
+  DAILY
+  WEEKDAYS
+  WEEKENDS
+  SPECIFIC_DAYS
+  WEEKLY
+  MONTHLY
+}
+
+enum FinancialGoalType {
+  BUDGET
+  SAVINGS
+  DEBT_PAYOFF
+  INVESTMENT
+}
+
+enum ContributionType {
+  DEPOSIT
+  WITHDRAWAL
+  PAYMENT
+  ADJUSTMENT
+}
+
+enum AIRecommendationType {
+  HABIT_ROUTINE
+  FINANCIAL_PLAN
+  WEEKLY_REVIEW
+  GOAL_ADJUSTMENT
+  MOTIVATION
+}
+
+enum NotificationChannel {
+  PUSH
+  EMAIL
+}
+
+// ============================================================
+// CORE MODELS
+// ============================================================
+
+model User {
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  passwordHash       String?
+  displayName        String
+  avatarUrl          String?
+  authProvider       AuthProvider @default(EMAIL)
+  authProviderId     String?
+  timezone           String    @default("UTC")
+  onboardingComplete Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  goals              Goal[]
+  habits             Habit[]
+  financialGoals     FinancialGoal[]
+  subscription       Subscription?
+  refreshTokens      RefreshToken[]
+  notificationPrefs  NotificationPreference[]
+  aiRecommendations  AIRecommendation[]
+  onboardingData     OnboardingData?
+  devices            UserDevice[]
+
+  @@index([email])
+  @@index([authProvider, authProviderId])
+  @@map("users")
+}
+
+model OnboardingData {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  topGoals         String[]
+  currentSituation Json
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("onboarding_data")
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  deviceId  String?
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@map("refresh_tokens")
+}
+
+model UserDevice {
+  id           String   @id @default(cuid())
+  userId       String
+  pushToken    String?
+  platform     String
+  deviceName   String?
+  lastActiveAt DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, pushToken])
+  @@map("user_devices")
+}
+
+// ============================================================
+// GOALS & HABITS
+// ============================================================
+
+model Goal {
+  id           String       @id @default(cuid())
+  userId       String
+  title        String
+  description  String?
+  category     GoalCategory @default(CUSTOM)
+  status       GoalStatus   @default(ACTIVE)
+  targetDate   DateTime?
+  targetValue  Float?
+  currentValue Float        @default(0)
+  unit         String?
+  sortOrder    Int          @default(0)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  completedAt  DateTime?
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  habits Habit[]
+
+  @@index([userId, status])
+  @@index([userId, category])
+  @@map("goals")
+}
+
+model Habit {
+  id              String         @id @default(cuid())
+  userId          String
+  goalId          String?
+  title           String
+  description     String?
+  frequency       HabitFrequency @default(DAILY)
+  daysOfWeek      Int            @default(127)
+  targetPerPeriod Int            @default(1)
+  reminderTime    String?
+  isActive        Boolean        @default(true)
+  color           String         @default("#4F46E5")
+  icon            String         @default("check-circle")
+  sortOrder       Int            @default(0)
+  currentStreak   Int            @default(0)
+  longestStreak   Int            @default(0)
+  consistencyScore Float         @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goal Goal? @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  logs HabitLog[]
+
+  @@index([userId, isActive])
+  @@index([goalId])
+  @@map("habits")
+}
+
+model HabitLog {
+  id          String   @id @default(cuid())
+  habitId     String
+  completedAt DateTime @default(now())
+  date        DateTime @db.Date
+  value       Float    @default(1)
+  note        String?
+  skipped     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@unique([habitId, date])
+  @@index([habitId, date])
+  @@index([date])
+  @@map("habit_logs")
+}
+
+// ============================================================
+// FINANCE
+// ============================================================
+
+model FinancialGoal {
+  id                      String            @id @default(cuid())
+  userId                  String
+  type                    FinancialGoalType
+  title                   String
+  description             String?
+  targetAmount            Decimal           @db.Decimal(12, 2)
+  currentAmount           Decimal           @default(0) @db.Decimal(12, 2)
+  currency                String            @default("USD")
+  startDate               DateTime          @default(now())
+  targetDate              DateTime?
+  interestRate            Float?
+  minimumPayment          Decimal?          @db.Decimal(12, 2)
+  monthlyBudget           Decimal?          @db.Decimal(12, 2)
+  budgetCategory          String?
+  isActive                Boolean           @default(true)
+  color                   String            @default("#10B981")
+  icon                    String            @default("dollar-sign")
+  sortOrder               Int               @default(0)
+  projectedCompletionDate DateTime?
+  paceStatus              String?
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+  completedAt             DateTime?
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contributions Contribution[]
+
+  @@index([userId, isActive])
+  @@index([userId, type])
+  @@map("financial_goals")
+}
+
+model Contribution {
+  id              String           @id @default(cuid())
+  financialGoalId String
+  type            ContributionType
+  amount          Decimal          @db.Decimal(12, 2)
+  date            DateTime         @db.Date
+  note            String?
+  createdAt       DateTime         @default(now())
+
+  financialGoal FinancialGoal @relation(fields: [financialGoalId], references: [id], onDelete: Cascade)
+
+  @@index([financialGoalId, date])
+  @@map("contributions")
+}
+
+// ============================================================
+// AI COACHING
+// ============================================================
+
+model AIRecommendation {
+  id          String                 @id @default(cuid())
+  userId      String
+  type        AIRecommendationType
+  title       String
+  content     String
+  metadata    Json?
+  isRead      Boolean                @default(false)
+  isDismissed Boolean                @default(false)
+  expiresAt   DateTime?
+  createdAt   DateTime               @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead, isDismissed])
+  @@index([userId, type])
+  @@map("ai_recommendations")
+}
+
+// ============================================================
+// SUBSCRIPTIONS
+// ============================================================
+
+model Subscription {
+  id                 String               @id @default(cuid())
+  userId             String               @unique
+  tier               SubscriptionTier     @default(FREE)
+  status             SubscriptionStatus   @default(ACTIVE)
+  platform           SubscriptionPlatform?
+  externalId         String?
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  cancelAtPeriodEnd  Boolean              @default(false)
+  priceId            String?
+  trialEndsAt        DateTime?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([externalId])
+  @@index([status])
+  @@map("subscriptions")
+}
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+
+model NotificationPreference {
+  id              String              @id @default(cuid())
+  userId          String
+  channel         NotificationChannel
+  enabled         Boolean             @default(true)
+  habitReminders  Boolean             @default(true)
+  streakAlerts    Boolean             @default(true)
+  weeklyReviews   Boolean             @default(true)
+  aiInsights      Boolean             @default(true)
+  financialAlerts Boolean             @default(true)
+  quietHoursStart String?
+  quietHoursEnd   String?
+  aiCheckInTimes  Json                @default("[]")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, channel])
+  @@map("notification_preferences")
+}

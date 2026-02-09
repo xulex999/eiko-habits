@@ -1,0 +1,12 @@
+{
+  "extends": "@eiko/config/tsconfig/nextjs.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./*"],
+      "@eiko/shared-types": ["../../packages/shared-types/src"],
+      "@eiko/shared-logic": ["../../packages/shared-logic/src"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}
