@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import * as financeService from './finance.service.js';
 
 export async function listFinancialGoals(req: Request, res: Response) {
-  const result = await financeService.listFinancialGoals(req.user!.id, req.query as any);
+  const result = await financeService.listFinancialGoals(req.user!.id, (req as any).validatedQuery || req.query);
 
   res.json({
     success: true,
@@ -54,7 +54,7 @@ export async function addContribution(req: Request, res: Response) {
 }
 
 export async function listContributions(req: Request, res: Response) {
-  const result = await financeService.listContributions(req.user!.id, req.params.id, req.query as any);
+  const result = await financeService.listContributions(req.user!.id, req.params.id, (req as any).validatedQuery || req.query);
 
   res.json({
     success: true,

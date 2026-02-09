@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import * as goalsService from './goals.service.js';
 
 export async function listGoals(req: Request, res: Response) {
-  const result = await goalsService.listGoals(req.user!.id, req.query as any);
+  const result = await goalsService.listGoals(req.user!.id, (req as any).validatedQuery || req.query);
   res.json({ success: true, data: result.goals, meta: result.meta });
 }
 

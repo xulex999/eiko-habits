@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import * as habitsService from './habits.service.js';
 
 export async function listHabits(req: Request, res: Response) {
-  const result = await habitsService.listHabits(req.user!.id, req.query as any);
+  const result = await habitsService.listHabits(req.user!.id, (req as any).validatedQuery || req.query);
   res.json({ success: true, data: result.habits, meta: result.meta });
 }
 
@@ -47,8 +47,9 @@ export async function undoCheckIn(req: Request, res: Response) {
 }
 
 export async function getHistory(req: Request, res: Response) {
-  const page = req.query.page ? Number(req.query.page) : undefined;
-  const perPage = req.query.perPage ? Number(req.query.perPage) : undefined;
+  const query = (req as any).validatedQuery || req.query;
+  const page = query.page ? Number(query.page) : undefined;
+  const perPage = query.perPage ? Number(query.perPage) : undefined;
   const result = await habitsService.getHistory(req.user!.id, req.params.id, page, perPage);
   res.json({ success: true, data: result.logs, meta: result.meta });
 }

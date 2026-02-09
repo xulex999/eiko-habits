@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import * as todosService from './todos.service.js';
 
 export async function listTodos(req: Request, res: Response) {
-  const result = await todosService.listTodos(req.user!.id, req.query as any);
+  const result = await todosService.listTodos(req.user!.id, (req as any).validatedQuery || req.query);
   res.json({ success: true, data: result.todos, meta: result.meta });
 }
 

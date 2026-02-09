@@ -26,11 +26,14 @@ export function validate(schema: ZodSchema) {
 
 /**
  * Validate query parameters.
+ * Note: In Express 5, req.query is read-only, so we store validated params in req.validatedQuery
  */
 export function validateQuery(schema: ZodSchema) {
   return (req: Request, _res: Response, next: NextFunction) => {
     try {
-      req.query = schema.parse(req.query) as any;
+      const validatedQuery = schema.parse(req.query);
+      // Store validated query in a custom property since req.query is read-only in Express 5
+      (req as any).validatedQuery = validatedQuery;
       next();
     } catch (err) {
       if (err instanceof ZodError) {
