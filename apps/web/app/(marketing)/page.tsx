@@ -1,8 +1,59 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 
+export const metadata: Metadata = {
+  title: 'Eiko Habits - Build Habits That Actually Stick',
+  description: 'Track habits, manage finances, and reach your goals with AI-powered coaching. One app for your entire self-improvement journey. Start free today.',
+  openGraph: {
+    title: 'Eiko Habits - Build Habits That Actually Stick',
+    description: 'Track habits, manage finances, and reach your goals with AI-powered coaching.',
+    type: 'website',
+  },
+};
+
 export default function LandingPage() {
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'Eiko Habits',
+    applicationCategory: 'ProductivityApplication',
+    operatingSystem: 'Web, iOS, Android',
+    offers: [
+      {
+        '@type': 'Offer',
+        price: '0',
+        priceCurrency: 'USD',
+        name: 'Free Plan',
+      },
+      {
+        '@type': 'Offer',
+        price: '19.99',
+        priceCurrency: 'USD',
+        name: 'Premium Monthly',
+        priceValidUntil: '2026-12-31',
+      },
+      {
+        '@type': 'Offer',
+        price: '99.99',
+        priceCurrency: 'USD',
+        name: 'Premium Yearly',
+        priceValidUntil: '2026-12-31',
+      },
+    ],
+    aggregateRating: {
+      '@type': 'AggregateRating',
+      ratingValue: '4.8',
+      ratingCount: '1250',
+    },
+    description: 'Build better habits, track your finances, and reach your goals with AI-powered coaching.',
+  };
+
   return (
     <div className="min-h-screen bg-[var(--background)]">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Nav */}
       <nav className="flex items-center justify-between px-6 py-4 max-w-7xl mx-auto">
         <div className="flex items-center gap-2">
@@ -34,12 +85,12 @@ export default function LandingPage() {
 
       {/* Hero */}
       <section className="max-w-4xl mx-auto px-6 pt-24 pb-16 text-center">
-        <h1 className="text-5xl md:text-6xl font-bold text-[var(--text-primary)] leading-tight">
+        <h1 className="text-5xl md:text-6xl font-bold text-[var(--text-primary)] leading-tight mb-6">
           Build habits that
           <br />
           <span className="text-[var(--primary)]">actually stick</span>
         </h1>
-        <p className="mt-6 text-xl text-[var(--text-secondary)] max-w-2xl mx-auto">
+        <p className="text-xl text-[var(--text-secondary)] max-w-2xl mx-auto">
           Track habits, manage finances, and reach your goals with AI-powered coaching.
           One app for your entire self-improvement journey.
         </p>

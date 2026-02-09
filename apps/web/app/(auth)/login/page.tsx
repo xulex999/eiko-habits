@@ -28,7 +28,7 @@ export default function LoginPage() {
       if (!data.success) throw new Error(data.error?.message || 'Login failed');
 
       localStorage.setItem('accessToken', data.data.tokens.accessToken);
-      router.push('/');
+      router.push('/dashboard');
     } catch (err: any) {
       setError(err.message);
     } finally {

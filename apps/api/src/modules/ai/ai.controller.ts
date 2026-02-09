@@ -30,3 +30,13 @@ export async function chatHandler(req: Request, res: Response) {
   const result = await aiService.chat(req.user!.id, req.body.message);
   res.json({ success: true, data: result });
 }
+
+export async function generateDailyTodos(req: Request, res: Response) {
+  const todos = await aiService.generateDailyTodoList(req.user!.id);
+  res.json({ success: true, data: todos });
+}
+
+export async function generateSmartReminders(req: Request, res: Response) {
+  const reminders = await aiService.generateSmartReminders(req.user!.id);
+  res.json({ success: true, data: reminders });
+}

@@ -16,3 +16,5 @@ aiRoutes.post('/habit-routine', validate(generateRoutineSchema), aiController.ge
 aiRoutes.post('/financial-plan', validate(generateFinancialPlanSchema), aiController.generateFinancialPlan);
 aiRoutes.post('/weekly-review', aiController.generateWeeklyReview);
 aiRoutes.post('/chat', validate(chatSchema), aiController.chatHandler);
+aiRoutes.post('/daily-todos', aiController.generateDailyTodos);
+aiRoutes.post('/smart-reminders', aiController.generateSmartReminders);

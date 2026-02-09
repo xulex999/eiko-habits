@@ -7,7 +7,11 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "lint": "next lint"
+    "lint": "next lint",
+    "lint:fix": "next lint --fix",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "analyze": "ANALYZE=true next build",
+    "clean": "rm -rf .next node_modules"
   },
   "dependencies": {
     "@eiko/config": "workspace:*",

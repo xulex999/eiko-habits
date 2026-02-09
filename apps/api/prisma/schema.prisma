@@ -91,6 +91,26 @@ enum NotificationChannel {
   EMAIL
 }
 
+enum NotificationType {
+  STREAK_MILESTONE
+  GOAL_DEADLINE
+  HABIT_REMINDER
+  FINANCIAL_ALERT
+  AI_INSIGHT
+  SYSTEM
+}
+
+enum TodoItemStatus {
+  PENDING
+  COMPLETED
+  SKIPPED
+}
+
+enum TodoItemSource {
+  USER
+  AI_GENERATED
+}
+
 // ============================================================
 // CORE MODELS
 // ============================================================
@@ -117,6 +137,9 @@ model User {
   aiRecommendations  AIRecommendation[]
   onboardingData     OnboardingData?
   devices            UserDevice[]
+  notifications      Notification[]
+  journalEntries     JournalEntry[]
+  todoItems          TodoItem[]
 
   @@index([email])
   @@index([authProvider, authProviderId])
@@ -365,4 +388,73 @@ model NotificationPreference {
 
   @@unique([userId, channel])
   @@map("notification_preferences")
+}
+
+// ============================================================
+// IN-APP NOTIFICATIONS
+// ============================================================
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  metadata  Json?
+  isRead    Boolean          @default(false)
+  actionUrl String?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+// ============================================================
+// JOURNAL
+// ============================================================
+
+model JournalEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String?
+  content   String
+  mood      Int?
+  tags      String[]
+  date      DateTime @db.Date
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+  @@map("journal_entries")
+}
+
+// ============================================================
+// TODO ITEMS
+// ============================================================
+
+model TodoItem {
+  id          String         @id @default(cuid())
+  userId      String
+  title       String
+  description String?
+  source      TodoItemSource @default(USER)
+  status      TodoItemStatus @default(PENDING)
+  dueDate     DateTime?      @db.Date
+  sortOrder   Int            @default(0)
+  aiContext    Json?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  completedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([userId, dueDate])
+  @@map("todo_items")
 }

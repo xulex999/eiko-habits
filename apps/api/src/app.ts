@@ -11,6 +11,9 @@ import { financeRoutes } from './modules/finance/finance.routes.js';
 import { aiRoutes } from './modules/ai/ai.routes.js';
 import { subscriptionsRoutes } from './modules/subscriptions/subscriptions.routes.js';
 import { dashboardRoutes } from './modules/dashboard/dashboard.routes.js';
+import { notificationsRoutes } from './modules/notifications/notifications.routes.js';
+import { journalRoutes } from './modules/journal/journal.routes.js';
+import { todosRoutes } from './modules/todos/todos.routes.js';
 
 export function createApp() {
   const app = express();
@@ -41,6 +44,9 @@ export function createApp() {
   app.use('/api/v1/ai', aiRoutes);
   app.use('/api/v1/subscriptions', subscriptionsRoutes);
   app.use('/api/v1/dashboard', dashboardRoutes);
+  app.use('/api/v1/notifications', notificationsRoutes);
+  app.use('/api/v1/journal', journalRoutes);
+  app.use('/api/v1/todos', todosRoutes);
 
   // Error handler (must be last)
   app.use(errorHandler);

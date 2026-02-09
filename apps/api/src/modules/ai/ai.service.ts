@@ -190,6 +190,166 @@ Please give me my weekly review.`;
   });
 }
 
+const DAILY_TODOS_SYSTEM = `You are Eiko, an AI productivity coach. Based on the user's active goals, habits, and progress, generate a focused daily to-do list of 5-8 specific, actionable items. Return ONLY a JSON array of objects with "title" and "description" fields. No markdown, no explanation — just the JSON array. Make items concrete and time-bound where possible.`;
+
+const SMART_REMINDERS_SYSTEM = `You are Eiko, an AI coach. Based on the user's habit completion data, goal progress, and financial tracking, generate 3-5 smart, contextual reminders. Focus on missed habits, approaching deadlines, and goals that need attention. Return ONLY a JSON array of objects with "title", "message", and "urgency" (one of "high", "medium", "low") fields. No markdown, no explanation — just the JSON array.`;
+
+export async function generateDailyTodoList(userId: string) {
+  const todayStr = toDateString(new Date());
+  const todayDate = new Date(todayStr + 'T00:00:00Z');
+
+  const [habits, habitLogsToday, goals, financialGoals] = await Promise.all([
+    prisma.habit.findMany({
+      where: { userId, isActive: true },
+      select: { title: true, frequency: true, currentStreak: true, consistencyScore: true },
+    }),
+    prisma.habitLog.findMany({
+      where: { habit: { userId }, date: todayDate },
+      select: { habit: { select: { title: true } } },
+    }),
+    prisma.goal.findMany({
+      where: { userId, status: 'ACTIVE' },
+      select: { title: true, category: true, currentValue: true, targetValue: true, targetDate: true },
+    }),
+    prisma.financialGoal.findMany({
+      where: { userId, isActive: true },
+      select: { title: true, type: true, currentAmount: true, targetAmount: true, paceStatus: true },
+    }),
+  ]);
+
+  const completedToday = new Set(habitLogsToday.map((l) => l.habit.title));
+
+  const userPrompt = `Here is my current status:
+
+Habits (completed today marked with ✓):
+${habits.map((h) => `${completedToday.has(h.title) ? '✓' : '○'} ${h.title} (${h.frequency}, streak: ${h.currentStreak})`).join('\n')}
+
+Active Goals:
+${goals.map((g) => `- ${g.title} (${g.category}${g.targetValue ? `, ${Math.round((g.currentValue / g.targetValue) * 100)}% done` : ''}${g.targetDate ? `, due ${g.targetDate.toISOString().split('T')[0]}` : ''})`).join('\n')}
+
+Financial Goals:
+${financialGoals.map((g) => `- ${g.title} (${g.type}): $${g.currentAmount}/$${g.targetAmount} — ${g.paceStatus || 'no pace data'}`).join('\n')}
+
+Generate my daily to-do list for today.`;
+
+  const provider = getAIProvider();
+  const result = await provider.generateText({
+    systemPrompt: DAILY_TODOS_SYSTEM,
+    userPrompt,
+    maxTokens: 800,
+  });
+
+  // Parse the AI response as JSON array
+  let items: Array<{ title: string; description?: string }> = [];
+  try {
+    const cleaned = result.text.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
+    items = JSON.parse(cleaned);
+  } catch {
+    // Fallback: create a single item with the raw text
+    items = [{ title: 'AI-generated tasks', description: result.text }];
+  }
+
+  // Delete existing uncompleted AI todos for today
+  await prisma.todoItem.deleteMany({
+    where: { userId, source: 'AI_GENERATED', status: 'PENDING', dueDate: todayDate },
+  });
+
+  // Create new todo items
+  const created = await Promise.all(
+    items.slice(0, 10).map((item, i) =>
+      prisma.todoItem.create({
+        data: {
+          userId,
+          title: item.title,
+          description: item.description || null,
+          source: 'AI_GENERATED',
+          status: 'PENDING',
+          dueDate: todayDate,
+          sortOrder: i,
+          aiContext: { provider: 'ai', tokensUsed: result.tokensUsed },
+        },
+      }),
+    ),
+  );
+
+  return created;
+}
+
+export async function generateSmartReminders(userId: string) {
+  const now = new Date();
+  const weekAgo = new Date(now);
+  weekAgo.setDate(weekAgo.getDate() - 7);
+
+  const [habits, recentLogs, goals, financialGoals] = await Promise.all([
+    prisma.habit.findMany({
+      where: { userId, isActive: true },
+      select: { title: true, currentStreak: true, consistencyScore: true },
+    }),
+    prisma.habitLog.findMany({
+      where: { habit: { userId }, date: { gte: weekAgo } },
+      select: { habit: { select: { title: true } }, date: true, skipped: true },
+    }),
+    prisma.goal.findMany({
+      where: { userId, status: 'ACTIVE' },
+      select: { title: true, currentValue: true, targetValue: true, targetDate: true },
+    }),
+    prisma.financialGoal.findMany({
+      where: { userId, isActive: true },
+      select: { title: true, type: true, currentAmount: true, targetAmount: true, paceStatus: true, targetDate: true },
+    }),
+  ]);
+
+  // Count completions per habit this week
+  const habitCompletions = new Map<string, number>();
+  recentLogs.filter((l) => !l.skipped).forEach((l) => {
+    habitCompletions.set(l.habit.title, (habitCompletions.get(l.habit.title) || 0) + 1);
+  });
+
+  const userPrompt = `Here is my data from the past week:
+
+Habits:
+${habits.map((h) => `- ${h.title}: ${habitCompletions.get(h.title) || 0}/7 days completed, streak: ${h.currentStreak}, consistency: ${Math.round(h.consistencyScore * 100)}%`).join('\n')}
+
+Goals:
+${goals.map((g) => `- ${g.title}${g.targetValue ? `: ${Math.round((g.currentValue / g.targetValue) * 100)}% done` : ''}${g.targetDate ? `, due ${g.targetDate.toISOString().split('T')[0]}` : ''}`).join('\n')}
+
+Financial:
+${financialGoals.map((g) => `- ${g.title} (${g.type}): $${g.currentAmount}/$${g.targetAmount}, pace: ${g.paceStatus || 'unknown'}${g.targetDate ? `, due ${g.targetDate.toISOString().split('T')[0]}` : ''}`).join('\n')}
+
+Generate smart reminders based on this data.`;
+
+  const provider = getAIProvider();
+  const result = await provider.generateText({
+    systemPrompt: SMART_REMINDERS_SYSTEM,
+    userPrompt,
+    maxTokens: 600,
+  });
+
+  let reminderItems: Array<{ title: string; message: string; urgency: string }> = [];
+  try {
+    const cleaned = result.text.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
+    reminderItems = JSON.parse(cleaned);
+  } catch {
+    reminderItems = [{ title: 'AI Insight', message: result.text, urgency: 'medium' }];
+  }
+
+  const created = await Promise.all(
+    reminderItems.slice(0, 5).map((item) =>
+      prisma.notification.create({
+        data: {
+          userId,
+          type: 'AI_INSIGHT',
+          title: item.title,
+          message: item.message,
+          metadata: { urgency: item.urgency, provider: 'ai', tokensUsed: result.tokensUsed },
+        },
+      }),
+    ),
+  );
+
+  return created;
+}
+
 export async function chat(userId: string, message: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },

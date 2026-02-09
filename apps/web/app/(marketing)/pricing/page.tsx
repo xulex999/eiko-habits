@@ -1,4 +1,10 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
+
+export const metadata: Metadata = {
+  title: 'Pricing',
+  description: "Simple, transparent pricing. Start free, upgrade when you're ready for AI coaching. Premium plans from $19.99/month or $99.99/year.",
+};
 
 export default function PricingPage() {
   return (

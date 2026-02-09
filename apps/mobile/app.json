@@ -15,14 +15,34 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.eikohabits.app"
+      "bundleIdentifier": "com.eikohabits.app",
+      "deploymentTarget": "15.0",
+      "buildNumber": "1",
+      "infoPlist": {
+        "UIBackgroundModes": ["remote-notification"],
+        "NSUserTrackingUsageDescription": "We use tracking to provide you with personalized habit insights and improve your experience.",
+        "NSCameraUsageDescription": "We need access to your camera to let you add photos to your habits.",
+        "NSPhotoLibraryUsageDescription": "We need access to your photo library to let you add photos to your habits.",
+        "CFBundleDisplayName": "Eiko Habits",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#4F46E5"
       },
-      "package": "com.eikohabits.app"
+      "package": "com.eikohabits.app",
+      "versionCode": 1,
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "NOTIFICATIONS"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -36,6 +56,14 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "your-project-id-here"
+      }
+    },
+    "owner": "your-expo-username",
+    "privacy": "public",
+    "primaryColor": "#4F46E5"
   }
 }
