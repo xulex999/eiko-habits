@@ -17,6 +17,7 @@
     "db:studio": "pnpm --filter @eiko/api exec prisma studio"
   },
   "devDependencies": {
+    "next": "^15.1.0",
     "turbo": "^2.3.0",
     "typescript": "^5.7.0",
     "prettier": "^3.4.0"
